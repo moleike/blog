@@ -230,10 +230,10 @@ should inspect the error and implement retries with exponential backoff.
 
 === Distance between two geo points
 
-We want our bot to notify users of unhealthy air *in the regions where they live and work*,
-so first we need to know which monitor is the closest to the users.
-For that, we will use the [harvesine formula][harvesine], which determines
-the great-circle distance between two points on a sphere given their longitudes and latitudes.
+We want our bot to notify users of unhealthy air *in the regions where they live and
+work*, so first we need to know which monitor is the closest to the users. For that,
+we will use the [harvesine formula][harvesine], which determines the great-circle
+distance between two points on a sphere given their longitudes and latitudes.
 
 First let's define a type alias for latitude/longitude pairs (in degrees):
 
@@ -277,7 +277,8 @@ closestTo :: [AQData] -> Coord -> AQData
 closestTo xs coord = (distance coord . getCoord) `minimumOn` xs
 \end{code}
 
-`minimumOn :: Ord b => (a -> b) -> [a] -> a`{.haskell} is defined in the package [extra][extra].
+`minimumOn :: Ord b => (a -> b) -> [a] -> a`{.haskell} is defined in the package
+[extra][extra].
 
 [extra]: https://hackage.haskell.org/package/extra
 
@@ -299,25 +300,28 @@ data Env = Env
 This way we can pass around the channel `token`{.haskell} and `secret`{.haskell},
 and the list of users, which are represented as `(Source, Coord)`{.haskell}.
 `Source`{.haskell} is defined in `Line.Bot.Webhook.Events`{.haskell} and it contains
-the `Id` of the user, group or room where push messages will be sent.
+the `Id`{.haskell} of the user, group or room where push messages will be sent.
 
 The user list will be concurrently read and updated from different threads, so we store it
 here in a mutable variable, using `Control.Concurrent.STM.TVar`{.haskell} from the
 [stm][stm] package[^1].
 
-We are going to use [mtl][mtl] typeclasses instead of a concrete monad transformer
-for this tutorial, for the reason that type constraints cleary express which effects can
-take place, and as a bonus will give us more options for composition.
+We are going to use [mtl][mtl] type classes instead of a concrete monad transformer
+stack for this tutorial[^2], with functions being polymorphic in their effect type. One
+benefit of this approach is that type constraints cleary express (and enforce) which
+effects can take place, and as a bonus will give us more options for composition.
 
 [^1]: Note that in this example the list of users will not be persisted
 across restarts or crashes; in a production environment you should use a database
 to store users.
 
+[^2]: the so-called mtl-style programming
+
 === Handling webhook events
 
-When an event, such as when our bot [joins a chatroom][join-event], an HTTP POST request is
-sent to our registered webhook URL with the channel. Here we are interested in
-three types of events (other events are just ignored):
+When an event, such as when our bot [joins a chatroom][join-event], an HTTP POST request
+is sent to our registered webhook URL with the channel. Here we are interested in three
+types of events (other events are just ignored):
 
 * when our bot is added as a friend (or unblocked)
 * joins a group or room
@@ -336,11 +340,16 @@ webhook events = do
   return NoContent
 \end{code}
 
-For the first two, we reply with a text message that contains a [quick
-reply button][using-quick-replies], with a location action: this allows
+For the first two, we reply with a text message that contains a quick
+reply button, with a location action: this allows
 the users to easily share their location for air monitoring.
 
-[using-quick-replies]: https://developers.line.biz/en/docs/messaging-api/using-quick-reply/
+
+We are using `Line.Bot.Types.ReplyToken`, which is included in events
+that can be replied:
+
+< replyMessage :: ReplyToken -> [Message] -> Line NoContent
+
 
 \begin{code}
 askLoc :: (MonadReader Env m, MonadIO m) => ReplyToken -> m ()
@@ -353,6 +362,13 @@ askLoc rt = do
       qr      = QuickReply [QuickReplyButton Nothing (ActionLocation "location")]
       comp    = replyMessage rt [B.MessageText welcome (Just qr)]
 \end{code}
+
+`MessageText`{.haskell} is a data constructor from `Line.Bot.Types.Message`{.haskell}.
+All messages can be sent with an optional `QuickReply`{.haskell}; Quick replies
+allow users to select from a predefined set of possible replies, see [here][using-quick-replies]
+for more details on using quick replies.
+
+[using-quick-replies]: https://developers.line.biz/en/docs/messaging-api/using-quick-reply/
 
 Once we receive a location message event, we add the user and her location
 to the shared list of users:
@@ -436,11 +452,10 @@ processAQData = do
 
 `processAQData`{.haskell} does serveral things:
 
-* read the list stored in the transactional variable `users` in the environment: if
-the list is empty, `retry`{.haskell}, blocking the thread until users are added.
-* call `getAQData`{.haskell}
-* we then run a list comprehension where we map each user, of type `(Source, Coord)`{.haskell}
-to `(Source, AQData)`{.haskell}
+* read the list stored in the transactional variable `users` in the environment: if the
+ list is empty, `retry`{.haskell}, blocking the thread until users are added.
+* call `getAQData`{.haskell} * we then run a list comprehension where we map each user, of
+ type `(Source, Coord)`{.haskell} to `(Source, AQData)`{.haskell}
 * for each user, call `notifyChat`
 
 \begin{code}
@@ -483,11 +498,14 @@ mkMessage :: AQData -> B.Message
 mkMessage x = B.MessageFlex "air quality alert!" (flexContent x) Nothing
 \end{code}
 
-< MessageFlex :: Text -> Data.Aeson.Value -> Maybe QuickReply -> Message
+A Flex message is constructed from an alternative text (for clients not supporting the feature),
+a `Data.Aeson.Value`{.haskell} which contains the message layout and content, and an optional quick reply:
+
+< MessageFlex :: Text -> Value -> Maybe QuickReply -> Message
 
 To design the layout of the alert message we used the [Flex Message Simulator][simulator].
-We will use the JSON quasiquoter [`aesonQQ`{.haskell}][aeson-qq], which converts a
-string representation of a JSON value into a `Data.Aeson.Value`{.haskell}:
+We will use the JSON quasiquoter [`aesonQQ`{.haskell}][aeson-qq], which converts (at compile time) a
+string representation of a JSON value into a `Value`{.haskell}:
 
 [aeson-qq]: http://hackage.haskell.org/package/aeson-qq
 
@@ -725,8 +743,7 @@ We are almost done! The only remaining part is to run our server and main loop:
   * We read from the environment the channel token and secret
   * create an initial `Env`{.haskell}.
   * thread the inital environment to our `app`{.haskell} and `loop`{.haskell}.
-
-`runEnv` will run a Warp web server in either PORT environment variable or default to 3000.
+  * call `Network.Wai.Handler.Warp.run`{.haskell} to run the webhook in port `3000`
 
 \begin{code}
 main :: IO ()
@@ -734,9 +751,11 @@ main = do
   token  <- fromString <$> getEnv "CHANNEL_TOKEN"
   secret <- fromString <$> getEnv "CHANNEL_SECRET"
   env    <- atomically $ Env token secret <$> newTVar []
-  liftIO $ runReaderT loop env
-  runEnv 3000 $ runReader app env
+  runReaderT loop env
+  run 3000 $ runReader app env
 \end{code}
+
+Here you can see we are actually instantiating `loop` and `app` to concrete monads.
 
 [aqi]: https://en.wikipedia.org/wiki/Air_quality_index
 [source]: https://gist.github.com/moleike/eb28b363ba7fb9478c9045036460fdd7

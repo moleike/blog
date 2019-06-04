@@ -51,19 +51,22 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 </blockquote>
 <p>Short and long-term exposure to air pollution can result in significant health problems. When air quality is considered unhealthy we should avoid certain activities, which bears asking: how to get notified when air quality is poor? this post is an attempt at solving this.</p>
 <p>The idea behind this chatbot is simple: users share their location, and the bot reads publicly available pollution data from local monitoring stations and if the air is unhealthy we push a message to the users to let them know.</p>
-<p><strong>Why using a chatbot?</strong></p>
-<p>Using a chatbot allows not only users but also groups to be notified about the air pollution levels, so, for instance, you can add the bot into your family chatroom and you and your relatives will be informed of the air quality. Additionally you can simply by sharing different locations with the bot keep track of sites where you and others spent time.</p>
+<h3 id="why-using-a-chatbot">Why using a chatbot?</h3>
+<p>Chatbots allow users to have a smooth interaction with your service, and it’s relatively easy to intergrate a chatbot with messaging apps.</p>
+<p>Using a chatbot also has the additional benefit that not only users but also groups can interact with your chatbot. For example, in this tutorial, you will learn how to simply <em>drop</em> a bot into your family chatroom and after you and your relatives will get promptly notified when air quality is poor; additionally, you can simply by sharing different locations with the bot keep track of sites where you and others spent time.</p>
+<p>We are going to be using the <a href="http://hackage.haskell.org/package/line-bot-sdk">line-bot-sdk</a>, a Haskell SDK for the LINE messaging platform. You can read an overview of the LINE Messaging API <a href="https://developers.line.biz/en/docs/messaging-api/overview/">here</a>.</p>
 <p>This blog post was generated from literate Haskell sources. For those who prefer to read the code, an extraction version can be found <a href="https://gist.github.com/moleike/eb28b363ba7fb9478c9045036460fdd7">here</a>.</p>
 <p>The <a href="http://hackage.haskell.org/package/line-bot-sdk">line-bot-sdk</a> uses the <a href="https://github.com/haskell-servant/servant">servant</a> framework, a set of packages for declaring web APIs at the type-level. Here are the GHC language extensions we need for this example to work:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb1-1" title="1"><span class="ot">{-# LANGUAGE DataKinds         #-}</span></a>
-<a class="sourceLine" id="cb1-2" title="2"><span class="ot">{-# LANGUAGE DeriveGeneric     #-}</span></a>
-<a class="sourceLine" id="cb1-3" title="3"><span class="ot">{-# LANGUAGE FlexibleContexts  #-}</span></a>
-<a class="sourceLine" id="cb1-4" title="4"><span class="ot">{-# LANGUAGE LambdaCase        #-}</span></a>
-<a class="sourceLine" id="cb1-5" title="5"><span class="ot">{-# LANGUAGE NamedFieldPuns    #-}</span></a>
-<a class="sourceLine" id="cb1-6" title="6"><span class="ot">{-# LANGUAGE OverloadedStrings #-}</span></a>
-<a class="sourceLine" id="cb1-7" title="7"><span class="ot">{-# LANGUAGE QuasiQuotes       #-}</span></a>
-<a class="sourceLine" id="cb1-8" title="8"><span class="ot">{-# LANGUAGE RecordWildCards   #-}</span></a>
-<a class="sourceLine" id="cb1-9" title="9"><span class="ot">{-# LANGUAGE TypeOperators     #-}</span></a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb1-1" title="1"><span class="ot">{-# LANGUAGE ApplicativeDo     #-}</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="ot">{-# LANGUAGE DataKinds         #-}</span></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="ot">{-# LANGUAGE DeriveGeneric     #-}</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="ot">{-# LANGUAGE FlexibleContexts  #-}</span></a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="ot">{-# LANGUAGE LambdaCase        #-}</span></a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="ot">{-# LANGUAGE NamedFieldPuns    #-}</span></a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="ot">{-# LANGUAGE OverloadedStrings #-}</span></a>
+<a class="sourceLine" id="cb1-8" title="8"><span class="ot">{-# LANGUAGE QuasiQuotes       #-}</span></a>
+<a class="sourceLine" id="cb1-9" title="9"><span class="ot">{-# LANGUAGE RecordWildCards   #-}</span></a>
+<a class="sourceLine" id="cb1-10" title="10"><span class="ot">{-# LANGUAGE TypeOperators     #-}</span></a></code></pre></div>
 <h3 id="imports">Imports</h3>
 <div class="sourceCode" id="cb2"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">import</span>           <span class="dt">Control.Concurrent.Lifted</span>   (fork, threadDelay)</a>
 <a class="sourceLine" id="cb2-2" title="2"><span class="kw">import</span>           <span class="dt">Control.Concurrent.STM.TVar</span> (<span class="dt">TVar</span>, modifyTVar, newTVar,</a>

@@ -20,13 +20,20 @@ The idea behind this chatbot is simple: users share their location, and the bot 
 publicly available pollution data from local monitoring stations and if the air is
 unhealthy we push a message to the users to let them know.
 
-**Why using a chatbot?**
+=== Why using a chatbot?
 
-Using a chatbot allows not only users but also groups to be notified about
-the air pollution levels, so, for instance, you can add the bot into your family
-chatroom and you and your relatives will be informed of the air quality. Additionally
-you can simply by sharing different locations with the bot keep track of sites
-where you and others spent time.
+Chatbots allow users to have a smooth interaction with your service, and it's relatively
+easy to intergrate a chatbot with messaging apps.
+
+Using a chatbot also has the additional benefit that not only users but also groups
+can interact with your chatbot. For example, in this tutorial, you will learn how to
+simply *drop* a bot into your family chatroom and after you and your relatives will get
+promptly notified when air quality is poor in the places you care about.
+
+We are going to be using the [line-bot-sdk][line-bot-sdk], a Haskell SDK for the LINE
+messaging platform. You can read an overview of the LINE Messaging API [here][overview].
+
+[overview]: https://developers.line.biz/en/docs/messaging-api/overview/
 
 This blog post was generated from literate Haskell sources. For those who prefer to
 read the code, an extraction version can be found [here][source].
@@ -36,6 +43,7 @@ packages for declaring web APIs at the type-level. Here are the GHC language
 extensions we need for this example to work:
 
 \begin{code}
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}

@@ -765,6 +765,12 @@ main = do
 
 Here you can see we are actually instantiating `loop` and `app` to concrete monads.
 
+=== Wanna be friends?
+
+You can follow (i.e. befriend) this exactly same bot as a friend:
+
+![line chat](../images/qr-code.png){ .center width=50% }\
+
 === Conclusion
 
 In this tutorial we have covered the development of a simple but practical chatbot.

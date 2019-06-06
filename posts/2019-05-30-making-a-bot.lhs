@@ -45,7 +45,6 @@ extensions we need for this example to work:
 \begin{code}
 {-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -79,7 +78,6 @@ import           Data.String                 (fromString)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import qualified Data.Vector                 as V
-import           GHC.Generics
 import           Line.Bot.Client
 import           Line.Bot.Types              as B
 import           Line.Bot.Webhook            as W
@@ -153,7 +151,7 @@ data AQData = AQData
     , co     :: Double
     , so2    :: Double
     }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 \end{code}
 
 However, first we need to do some data preprocessing:
@@ -193,6 +191,8 @@ method we can implement:
 instance FromJSON AQData where
   parseJSONList = withArray "[AQData]" $ \arr ->
     catMaybes <$> forM (V.toList arr) parseAQData
+
+  parseJSON _   = fail "not an array"
 \end{code}
 
 Array items go through `parseAQData`{.haskell}. Here the `MaybeT`{.haskell}
@@ -764,6 +764,12 @@ main = do
 \end{code}
 
 Here you can see we are actually instantiating `loop` and `app` to concrete monads.
+
+=== Conclusion
+
+In this tutorial we have covered the development of a simple but practical chatbot.
+I hope you enjoyed reading (and perhaps coding along) and maybe help you getting started
+with your own chatbot ideas!
 
 [aqi]: https://en.wikipedia.org/wiki/Air_quality_index
 [source]: https://gist.github.com/moleike/eb28b363ba7fb9478c9045036460fdd7

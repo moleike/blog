@@ -27,7 +27,7 @@ easy to intergrate a chatbot with messaging apps.
 
 Using a chatbot also has the additional benefit that not only users but also groups
 can interact with your chatbot. For example, in this tutorial, you will learn how to
-simply *drop* a bot into your family chatroom and after you and your relatives will get
+simply *drop* a bot into your family chatroom and after that you and your relatives will get
 promptly notified when air quality is poor in the places you care about.
 
 We are going to be using the [line-bot-sdk][line-bot-sdk], a Haskell SDK for the LINE
@@ -290,8 +290,6 @@ closestTo xs coord = (distance coord . getCoord) `minimumOn` xs
 
 [extra]: https://hackage.haskell.org/package/extra
 
-
-
 === App environment
 
 Most of the computations we are going to define require reading values from
@@ -319,11 +317,11 @@ stack for this tutorial[^2], with functions being polymorphic in their effect ty
 benefit of this approach is that type constraints cleary express (and enforce) which
 effects can take place, and as a bonus will give us more options for composition.
 
-[^1]: Note that in this example the list of users will not be persisted
+[^1]: Bear in mind that in this example the list of users will not be persisted
 across restarts or crashes; in a production environment you should use a database
 to store users.
 
-[^2]: the so-called mtl-style programming
+[^2]: The so-called mtl-style programming
 
 === Handling webhook events
 
@@ -353,11 +351,14 @@ reply button, with a location action: this allows
 the users to easily share their location for air monitoring.
 
 
-We are using `Line.Bot.Types.ReplyToken`, which is included in events
+We are using `Line.Bot.Types.ReplyToken`{.haskell}, which is included in events
 that can be replied:
 
 < replyMessage :: ReplyToken -> [Message] -> Line NoContent
 
+[`Line`{.haskell}][line-client] is the monad to send requests to the LINE bot platform.
+
+[line-client]: http://hackage.haskell.org/package/line-bot-sdk/docs/Line-Bot-Client.html
 
 \begin{code}
 askLoc :: (MonadReader Env m, MonadIO m) => ReplyToken -> m ()
@@ -376,7 +377,18 @@ All messages can be sent with an optional `QuickReply`{.haskell}; Quick replies
 allow users to select from a predefined set of possible replies, see [here][using-quick-replies]
 for more details on using quick replies.
 
+Finally `runLine`{.haskell} runs the given request with the channel token from the
+environment[^3]:
+
+< runLine :: Line a -> ChannelToken -> IO (Either ClientError a)
+
+[^3]: Note that in order to keep this tutorial concise, we are not checking for
+possible errors, but you should pattern match the result of `runLine`{.haskell}.
+`Line`{.haskell} has an instance of [`MonadError ClientError`{.haskell}][monad-error]
+so you can catch errors there, too.
+
 [using-quick-replies]: https://developers.line.biz/en/docs/messaging-api/using-quick-reply/
+[monad-error]: http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html
 
 Once we receive a location message event, we add the user and her location
 to the shared list of users:
@@ -458,13 +470,23 @@ processAQData = do
   return ()
 \end{code}
 
-`processAQData`{.haskell} does serveral things:
+`processAQData`{.haskell} does serveral things[^4]:
 
 * read the list stored in the transactional variable `users` in the environment: if the
- list is empty, `retry`{.haskell}, blocking the thread until users are added.
-* call `getAQData`{.haskell} * we then run a list comprehension where we map each user, of
+ list is empty, `retry`{.haskell}, blocking the thread until users are added
+* call `getAQData`{.haskell} to get the most recently available air quality data
+* we then run a list comprehension where we map each user, of
  type `(Source, Coord)`{.haskell} to `(Source, AQData)`{.haskell}
 * for each user, call `notifyChat`
+
+[^4]: The naive solution we are building here to associate users to monitoring stations would
+be impractical for a real application, where it would make more sense to filter out those data points
+where pollution is of concern, and then for each data point retrieve all users that are within
+a given distance e.g. using a geospatial index, and notify them with [multicast messages][multicast-messages].
+
+[multicast-messages]: https://developers.line.biz/en/reference/messaging-api/#send-multicast-message
+
+
 
 \begin{code}
 notifyChat :: (Source, AQData) -> Line NoContent
@@ -767,7 +789,7 @@ Here you can see we are actually instantiating `loop` and `app` to concrete mona
 
 === Wanna be friends?
 
-You can follow (i.e. befriend) this exactly same bot as a friend:
+If you live in Taiwan, you can follow this exactly same bot and see how it works:
 
 ![line chat](../images/qr-code.png){ .center width=50% }\
 

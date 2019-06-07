@@ -53,7 +53,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <p>The idea behind this chatbot is simple: users share their location, and the bot reads publicly available pollution data from local monitoring stations and if the air is unhealthy we push a message to the users to let them know.</p>
 <h3 id="why-using-a-chatbot">Why using a chatbot?</h3>
 <p>Chatbots allow users to have a smooth interaction with your service, and it’s relatively easy to intergrate a chatbot with messaging apps.</p>
-<p>Using a chatbot also has the additional benefit that not only users but also groups can interact with your chatbot. For example, in this tutorial, you will learn how to simply <em>drop</em> a bot into your family chatroom and after you and your relatives will get promptly notified when air quality is poor in the places you care about.</p>
+<p>Using a chatbot also has the additional benefit that not only users but also groups can interact with your chatbot. For example, in this tutorial, you will learn how to simply <em>drop</em> a bot into your family chatroom and after that you and your relatives will get promptly notified when air quality is poor in the places you care about.</p>
 <p>We are going to be using the <a href="http://hackage.haskell.org/package/line-bot-sdk">line-bot-sdk</a>, a Haskell SDK for the LINE messaging platform. You can read an overview of the LINE Messaging API <a href="https://developers.line.biz/en/docs/messaging-api/overview/">here</a>.</p>
 <p>This blog post was generated from literate Haskell sources. For those who prefer to read the code, an extraction version can be found <a href="https://gist.github.com/moleike/eb28b363ba7fb9478c9045036460fdd7">here</a>.</p>
 <p>The <a href="http://hackage.haskell.org/package/line-bot-sdk">line-bot-sdk</a> uses the <a href="https://github.com/haskell-servant/servant">servant</a> framework, a set of packages for declaring web APIs at the type-level. Here are the GHC language extensions we need for this example to work:</p>
@@ -246,8 +246,9 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <a class="sourceLine" id="cb19-9" title="9">    _                 <span class="ot">-&gt;</span> <span class="fu">return</span> ()</a>
 <a class="sourceLine" id="cb19-10" title="10">  <span class="fu">return</span> <span class="dt">NoContent</span></a></code></pre></div>
 <p>For the first two, we reply with a text message that contains a quick reply button, with a location action: this allows the users to easily share their location for air monitoring.</p>
-<p>We are using <code>Line.Bot.Types.ReplyToken</code>, which is included in events that can be replied:</p>
+<p>We are using <code class="sourceCode haskell"><span class="dt">Line.Bot.Types.ReplyToken</span></code>, which is included in events that can be replied:</p>
 <div class="sourceCode" id="cb20"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb20-1" title="1"><span class="ot">replyMessage ::</span> <span class="dt">ReplyToken</span> <span class="ot">-&gt;</span> [<span class="dt">Message</span>] <span class="ot">-&gt;</span> <span class="dt">Line</span> <span class="dt">NoContent</span></a></code></pre></div>
+<p><a href="http://hackage.haskell.org/package/line-bot-sdk/docs/Line-Bot-Client.html"><code class="sourceCode haskell"><span class="dt">Line</span></code></a> is the monad to send requests to the LINE bot platform.</p>
 <div class="sourceCode" id="cb21"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb21-1" title="1"><span class="ot">askLoc ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m) <span class="ot">=&gt;</span> <span class="dt">ReplyToken</span> <span class="ot">-&gt;</span> m ()</a>
 <a class="sourceLine" id="cb21-2" title="2">askLoc rt <span class="fu">=</span> <span class="kw">do</span></a>
 <a class="sourceLine" id="cb21-3" title="3">  <span class="dt">Env</span> {token} <span class="ot">&lt;-</span> ask</a>
@@ -258,298 +259,301 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <a class="sourceLine" id="cb21-8" title="8">      qr      <span class="fu">=</span> <span class="dt">QuickReply</span> [<span class="dt">QuickReplyButton</span> <span class="dt">Nothing</span> (<span class="dt">ActionLocation</span> <span class="st">&quot;location&quot;</span>)]</a>
 <a class="sourceLine" id="cb21-9" title="9">      comp    <span class="fu">=</span> replyMessage rt [<span class="dt">B.MessageText</span> welcome (<span class="dt">Just</span> qr)]</a></code></pre></div>
 <p><code class="sourceCode haskell"><span class="dt">MessageText</span></code> is a data constructor from <code class="sourceCode haskell"><span class="dt">Line.Bot.Types.Message</span></code>. All messages can be sent with an optional <code class="sourceCode haskell"><span class="dt">QuickReply</span></code>; Quick replies allow users to select from a predefined set of possible replies, see <a href="https://developers.line.biz/en/docs/messaging-api/using-quick-reply/">here</a> for more details on using quick replies.</p>
+<p>Finally <code class="sourceCode haskell">runLine</code> runs the given request with the channel token from the environment<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a>:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb22-1" title="1"><span class="ot">runLine ::</span> <span class="dt">Line</span> a <span class="ot">-&gt;</span> <span class="dt">ChannelToken</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> (<span class="dt">Either</span> <span class="dt">ClientError</span> a)</a></code></pre></div>
 <p>Once we receive a location message event, we add the user and her location to the shared list of users:</p>
-<div class="sourceCode" id="cb22"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb22-1" title="1"><span class="ot">addUser ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m) <span class="ot">=&gt;</span> <span class="dt">Source</span> <span class="ot">-&gt;</span> <span class="dt">Coord</span> <span class="ot">-&gt;</span> m ()</a>
-<a class="sourceLine" id="cb22-2" title="2">addUser source coord <span class="fu">=</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb22-3" title="3">  <span class="dt">Env</span> {users} <span class="ot">&lt;-</span> ask</a>
-<a class="sourceLine" id="cb22-4" title="4">  liftIO <span class="fu">$</span> atomically <span class="fu">$</span> modifyTVar users ((source, coord) <span class="fu">:</span>)</a>
-<a class="sourceLine" id="cb22-5" title="5">  <span class="fu">return</span> ()</a></code></pre></div>
+<div class="sourceCode" id="cb23"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb23-1" title="1"><span class="ot">addUser ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m) <span class="ot">=&gt;</span> <span class="dt">Source</span> <span class="ot">-&gt;</span> <span class="dt">Coord</span> <span class="ot">-&gt;</span> m ()</a>
+<a class="sourceLine" id="cb23-2" title="2">addUser source coord <span class="fu">=</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb23-3" title="3">  <span class="dt">Env</span> {users} <span class="ot">&lt;-</span> ask</a>
+<a class="sourceLine" id="cb23-4" title="4">  liftIO <span class="fu">$</span> atomically <span class="fu">$</span> modifyTVar users ((source, coord) <span class="fu">:</span>)</a>
+<a class="sourceLine" id="cb23-5" title="5">  <span class="fu">return</span> ()</a></code></pre></div>
 <p>We add the source of the event, so if the message was sent from a group, we will notify the group, not the user who shared the location.</p>
 <p>Note that for a real-world chatbot you should handle dual events like <code>unfollow</code> or <code>leave</code>.</p>
 <h3 id="serving-the-webhook-wai-application">Serving the webhook: WAI application</h3>
 <p>To serve our webhook API we need to produce a <a href="http://hackage.haskell.org/package/wai">WAI</a> app.</p>
 <p>The line-bot-sdk exports a type synonym defined in <code class="sourceCode haskell"><span class="dt">Line.Bot.Webhook</span></code> that encodes the LINE webhook API:</p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb23-1" title="1"><span class="kw">newtype</span> <span class="dt">Events</span><span class="ot"> ::</span> <span class="dt">Events</span> {<span class="ot"> events ::</span> [<span class="dt">Event</span>] }</a>
-<a class="sourceLine" id="cb23-2" title="2"><span class="kw">type</span> <span class="dt">Webhook</span> <span class="fu">=</span> <span class="dt">LineReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">Events</span> <span class="fu">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">JSON</span>] <span class="dt">NoContent</span></a></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb24-1" title="1"><span class="kw">newtype</span> <span class="dt">Events</span><span class="ot"> ::</span> <span class="dt">Events</span> {<span class="ot"> events ::</span> [<span class="dt">Event</span>] }</a>
+<a class="sourceLine" id="cb24-2" title="2"><span class="kw">type</span> <span class="dt">Webhook</span> <span class="fu">=</span> <span class="dt">LineReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">Events</span> <span class="fu">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">JSON</span>] <span class="dt">NoContent</span></a></code></pre></div>
 <p>The <code class="sourceCode haskell"><span class="dt">LineReqBody</span></code> combinator will validate that incoming requests originate from the LINE platform.</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb24-1" title="1"><span class="ot">aqServer ::</span> <span class="dt">ServerT</span> <span class="dt">Webhook</span> (<span class="dt">ReaderT</span> <span class="dt">Env</span> <span class="dt">Handler</span>)</a>
-<a class="sourceLine" id="cb24-2" title="2">aqServer <span class="fu">=</span> webhook <span class="fu">.</span> events</a></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb25-1" title="1"><span class="ot">aqServer ::</span> <span class="dt">ServerT</span> <span class="dt">Webhook</span> (<span class="dt">ReaderT</span> <span class="dt">Env</span> <span class="dt">Handler</span>)</a>
+<a class="sourceLine" id="cb25-2" title="2">aqServer <span class="fu">=</span> webhook <span class="fu">.</span> events</a></code></pre></div>
 <p>Servant handlers run by default in the <code class="sourceCode haskell"><span class="dt">Handler</span></code> monad. In order to let our webhook handler to read the environment <code class="sourceCode haskell"><span class="dt">Env</span></code> (which is enforced by the type constraint in <code class="sourceCode haskell">webhook</code>) we are going to stack the Reader monad.</p>
 <p>It is beyond the scope of this tutorial to cover the nuts and bolts of the Servant web framework, which are well-covered in e.g. the <a href="https://haskell-servant.readthedocs.io/en/stable/tutorial/index.html">servant tutorials</a>.</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb25-1" title="1">api <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> <span class="dt">Webhook</span></a>
-<a class="sourceLine" id="cb25-2" title="2">ctx <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> '[<span class="dt">ChannelSecret</span>]</a>
-<a class="sourceLine" id="cb25-3" title="3"></a>
-<a class="sourceLine" id="cb25-4" title="4"><span class="ot">app ::</span> <span class="dt">MonadReader</span> <span class="dt">Env</span> m <span class="ot">=&gt;</span> m <span class="dt">Application</span></a>
-<a class="sourceLine" id="cb25-5" title="5">app <span class="fu">=</span> ask <span class="fu">&gt;&gt;=</span> \env <span class="ot">-&gt;</span></a>
-<a class="sourceLine" id="cb25-6" title="6">  <span class="kw">let</span> server <span class="fu">=</span> hoistServerWithContext api ctx (<span class="ot">`runReaderT`</span> env) aqServer</a>
-<a class="sourceLine" id="cb25-7" title="7">  <span class="kw">in</span>  <span class="fu">return</span> <span class="fu">$</span> serveWithContext api (secret env <span class="fu">:.</span> <span class="dt">EmptyContext</span>) server</a></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb26-1" title="1">api <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> <span class="dt">Webhook</span></a>
+<a class="sourceLine" id="cb26-2" title="2">ctx <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> '[<span class="dt">ChannelSecret</span>]</a>
+<a class="sourceLine" id="cb26-3" title="3"></a>
+<a class="sourceLine" id="cb26-4" title="4"><span class="ot">app ::</span> <span class="dt">MonadReader</span> <span class="dt">Env</span> m <span class="ot">=&gt;</span> m <span class="dt">Application</span></a>
+<a class="sourceLine" id="cb26-5" title="5">app <span class="fu">=</span> ask <span class="fu">&gt;&gt;=</span> \env <span class="ot">-&gt;</span></a>
+<a class="sourceLine" id="cb26-6" title="6">  <span class="kw">let</span> server <span class="fu">=</span> hoistServerWithContext api ctx (<span class="ot">`runReaderT`</span> env) aqServer</a>
+<a class="sourceLine" id="cb26-7" title="7">  <span class="kw">in</span>  <span class="fu">return</span> <span class="fu">$</span> serveWithContext api (secret env <span class="fu">:.</span> <span class="dt">EmptyContext</span>) server</a></code></pre></div>
 <p>The final step is to turn our <code class="sourceCode haskell">aqServer</code> into a WAI <code class="sourceCode haskell"><span class="dt">Application</span></code>.</p>
 <p>Servant allows to pass values to combinators by using a <code class="sourceCode haskell"><span class="dt">Context</span></code>. The <code class="sourceCode haskell"><span class="dt">LineReqBody</span></code> combinator requires a <code class="sourceCode haskell"><span class="dt">Context</span></code> with the channel secret. This is enforced by the type-level list <code>'[ChannelSecret]</code>.</p>
 <h3 id="periodic-updates">Periodic updates</h3>
 <p>We previously defined <code class="sourceCode haskell">getAQData</code>, which is an <code class="sourceCode haskell"><span class="dt">IO</span></code> action that returns the list of (valid) data points. Our goal now is to call this API every hour to get the latest measured data and map it to our users, based on the location:</p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb26-1" title="1"><span class="ot">processAQData ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m) <span class="ot">=&gt;</span> m ()</a>
-<a class="sourceLine" id="cb26-2" title="2">processAQData <span class="fu">=</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb26-3" title="3">  <span class="dt">Env</span> {users, token} <span class="ot">&lt;-</span> ask</a>
-<a class="sourceLine" id="cb26-4" title="4">  users' <span class="ot">&lt;-</span> liftIO <span class="fu">$</span> atomically <span class="fu">$</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb26-5" title="5">    xs <span class="ot">&lt;-</span> readTVar users</a>
-<a class="sourceLine" id="cb26-6" title="6">    <span class="kw">case</span> xs <span class="kw">of</span></a>
-<a class="sourceLine" id="cb26-7" title="7">      [] <span class="ot">-&gt;</span> retry</a>
-<a class="sourceLine" id="cb26-8" title="8">      _  <span class="ot">-&gt;</span> <span class="fu">return</span> xs</a>
-<a class="sourceLine" id="cb26-9" title="9">  liftIO <span class="fu">$</span> getAQData <span class="fu">&gt;&gt;=</span> \aqData <span class="ot">-&gt;</span></a>
-<a class="sourceLine" id="cb26-10" title="10">    <span class="kw">let</span> users'' <span class="fu">=</span> [(user, aqData <span class="ot">`closestTo`</span> coord) <span class="fu">|</span> (user, coord) <span class="ot">&lt;-</span> users']</a>
-<a class="sourceLine" id="cb26-11" title="11">    <span class="kw">in</span>  forM_ users'' <span class="fu">$</span> <span class="fu">flip</span> runLine token <span class="fu">.</span> notifyChat</a>
-<a class="sourceLine" id="cb26-12" title="12">  <span class="fu">return</span> ()</a></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb27-1" title="1"><span class="ot">processAQData ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m) <span class="ot">=&gt;</span> m ()</a>
+<a class="sourceLine" id="cb27-2" title="2">processAQData <span class="fu">=</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb27-3" title="3">  <span class="dt">Env</span> {users, token} <span class="ot">&lt;-</span> ask</a>
+<a class="sourceLine" id="cb27-4" title="4">  users' <span class="ot">&lt;-</span> liftIO <span class="fu">$</span> atomically <span class="fu">$</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb27-5" title="5">    xs <span class="ot">&lt;-</span> readTVar users</a>
+<a class="sourceLine" id="cb27-6" title="6">    <span class="kw">case</span> xs <span class="kw">of</span></a>
+<a class="sourceLine" id="cb27-7" title="7">      [] <span class="ot">-&gt;</span> retry</a>
+<a class="sourceLine" id="cb27-8" title="8">      _  <span class="ot">-&gt;</span> <span class="fu">return</span> xs</a>
+<a class="sourceLine" id="cb27-9" title="9">  liftIO <span class="fu">$</span> getAQData <span class="fu">&gt;&gt;=</span> \aqData <span class="ot">-&gt;</span></a>
+<a class="sourceLine" id="cb27-10" title="10">    <span class="kw">let</span> users'' <span class="fu">=</span> [(user, aqData <span class="ot">`closestTo`</span> coord) <span class="fu">|</span> (user, coord) <span class="ot">&lt;-</span> users']</a>
+<a class="sourceLine" id="cb27-11" title="11">    <span class="kw">in</span>  forM_ users'' <span class="fu">$</span> <span class="fu">flip</span> runLine token <span class="fu">.</span> notifyChat</a>
+<a class="sourceLine" id="cb27-12" title="12">  <span class="fu">return</span> ()</a></code></pre></div>
 <p><code class="sourceCode haskell">processAQData</code> does serveral things:</p>
 <ul>
-<li>read the list stored in the transactional variable <code>users</code> in the environment: if the list is empty, <code class="sourceCode haskell">retry</code>, blocking the thread until users are added.</li>
-<li>call <code class="sourceCode haskell">getAQData</code> * we then run a list comprehension where we map each user, of type <code class="sourceCode haskell">(<span class="dt">Source</span>, <span class="dt">Coord</span>)</code> to <code class="sourceCode haskell">(<span class="dt">Source</span>, <span class="dt">AQData</span>)</code></li>
+<li>read the list stored in the transactional variable <code>users</code> in the environment: if the list is empty, <code class="sourceCode haskell">retry</code>, blocking the thread until users are added</li>
+<li>call <code class="sourceCode haskell">getAQData</code> to get the most recently available air quality data</li>
+<li>we then run a list comprehension where we map each user, of type <code class="sourceCode haskell">(<span class="dt">Source</span>, <span class="dt">Coord</span>)</code> to <code class="sourceCode haskell">(<span class="dt">Source</span>, <span class="dt">AQData</span>)</code></li>
 <li>for each user, call <code>notifyChat</code></li>
 </ul>
-<div class="sourceCode" id="cb27"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb27-1" title="1"><span class="ot">notifyChat ::</span> (<span class="dt">Source</span>, <span class="dt">AQData</span>) <span class="ot">-&gt;</span> <span class="dt">Line</span> <span class="dt">NoContent</span></a>
-<a class="sourceLine" id="cb27-2" title="2">notifyChat (<span class="dt">Source</span> a, x)</a>
-<a class="sourceLine" id="cb27-3" title="3">  <span class="fu">|</span> unhealthy x <span class="fu">=</span> pushMessage a [mkMessage x]</a>
-<a class="sourceLine" id="cb27-4" title="4">  <span class="fu">|</span> <span class="fu">otherwise</span>   <span class="fu">=</span> <span class="fu">return</span> <span class="dt">NoContent</span></a></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb28-1" title="1"><span class="ot">notifyChat ::</span> (<span class="dt">Source</span>, <span class="dt">AQData</span>) <span class="ot">-&gt;</span> <span class="dt">Line</span> <span class="dt">NoContent</span></a>
+<a class="sourceLine" id="cb28-2" title="2">notifyChat (<span class="dt">Source</span> a, x)</a>
+<a class="sourceLine" id="cb28-3" title="3">  <span class="fu">|</span> unhealthy x <span class="fu">=</span> pushMessage a [mkMessage x]</a>
+<a class="sourceLine" id="cb28-4" title="4">  <span class="fu">|</span> <span class="fu">otherwise</span>   <span class="fu">=</span> <span class="fu">return</span> <span class="dt">NoContent</span></a></code></pre></div>
 <p>To alert users, we will push messages to those users whose closest monitoring station reports an AQI over 100:</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb28-1" title="1"><span class="ot">unhealthy ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span></a>
-<a class="sourceLine" id="cb28-2" title="2">unhealthy <span class="dt">AQData</span>{<span class="fu">..</span>} <span class="fu">=</span> aqi <span class="fu">&gt;</span> <span class="dv">100</span></a></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb29-1" title="1"><span class="ot">unhealthy ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span></a>
+<a class="sourceLine" id="cb29-2" title="2">unhealthy <span class="dt">AQData</span>{<span class="fu">..</span>} <span class="fu">=</span> aqi <span class="fu">&gt;</span> <span class="dv">100</span></a></code></pre></div>
 <p><code class="sourceCode haskell">processAQData</code> needs to be called periodically, at least once every hour. We will run it in a separate thread, so that it runs concurrently with our webhook server:</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb29-1" title="1"><span class="ot">loop ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m, <span class="dt">MonadBaseControl</span> <span class="dt">IO</span> m) <span class="ot">=&gt;</span> m ()</a>
-<a class="sourceLine" id="cb29-2" title="2">loop <span class="fu">=</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb29-3" title="3">  fork <span class="fu">$</span> forever <span class="fu">$</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb29-4" title="4">    processAQData</a>
-<a class="sourceLine" id="cb29-5" title="5">    threadDelay (<span class="dv">3600</span> <span class="fu">*</span> <span class="dv">10</span><span class="fu">^</span><span class="dv">6</span>)</a>
-<a class="sourceLine" id="cb29-6" title="6">  <span class="fu">return</span> ()</a></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb30-1" title="1"><span class="ot">loop ::</span> (<span class="dt">MonadReader</span> <span class="dt">Env</span> m, <span class="dt">MonadIO</span> m, <span class="dt">MonadBaseControl</span> <span class="dt">IO</span> m) <span class="ot">=&gt;</span> m ()</a>
+<a class="sourceLine" id="cb30-2" title="2">loop <span class="fu">=</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb30-3" title="3">  fork <span class="fu">$</span> forever <span class="fu">$</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb30-4" title="4">    processAQData</a>
+<a class="sourceLine" id="cb30-5" title="5">    threadDelay (<span class="dv">3600</span> <span class="fu">*</span> <span class="dv">10</span><span class="fu">^</span><span class="dv">6</span>)</a>
+<a class="sourceLine" id="cb30-6" title="6">  <span class="fu">return</span> ()</a></code></pre></div>
 <h3 id="air-quality-alerts">Air quality alerts</h3>
 <p>To inform users of pollution levels, we will use a <a href="https://developers.line.biz/en/docs/messaging-api/using-flex-messages/">Flex Message</a>, which are messages with customizable layouts written in JSON format.</p>
 <p><img src="../images/S__3285033.jpg" alt="line chat" class="center" style="width:33.0%" /><br />
 </p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb30-1" title="1"><span class="ot">mkMessage ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">B.Message</span></a>
-<a class="sourceLine" id="cb30-2" title="2">mkMessage x <span class="fu">=</span> <span class="dt">B.MessageFlex</span> <span class="st">&quot;air quality alert!&quot;</span> (flexContent x) <span class="dt">Nothing</span></a></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb31-1" title="1"><span class="ot">mkMessage ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">B.Message</span></a>
+<a class="sourceLine" id="cb31-2" title="2">mkMessage x <span class="fu">=</span> <span class="dt">B.MessageFlex</span> <span class="st">&quot;air quality alert!&quot;</span> (flexContent x) <span class="dt">Nothing</span></a></code></pre></div>
 <p>A Flex message is constructed from an alternative text (for clients not supporting the feature), a <code class="sourceCode haskell"><span class="dt">Data.Aeson.Value</span></code> which contains the message layout and content, and an optional quick reply:</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb31-1" title="1"><span class="dt">MessageFlex</span><span class="ot"> ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Value</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">QuickReply</span> <span class="ot">-&gt;</span> <span class="dt">Message</span></a></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb32-1" title="1"><span class="dt">MessageFlex</span><span class="ot"> ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Value</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> <span class="dt">QuickReply</span> <span class="ot">-&gt;</span> <span class="dt">Message</span></a></code></pre></div>
 <p>To design the layout of the alert message we used the <a href="https://developers.line.biz/console/fx/">Flex Message Simulator</a>. We will use the JSON quasiquoter <a href="http://hackage.haskell.org/package/aeson-qq"><code class="sourceCode haskell">aesonQQ</code></a>, which converts (at compile time) a string representation of a JSON value into a <code class="sourceCode haskell"><span class="dt">Value</span></code>:</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb32-1" title="1"><span class="ot">flexContent ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">Value</span></a>
-<a class="sourceLine" id="cb32-2" title="2">flexContent <span class="dt">AQData</span>{<span class="fu">..</span>} <span class="fu">=</span> [aesonQQ|</a>
-<a class="sourceLine" id="cb32-3" title="3">  {</a>
-<a class="sourceLine" id="cb32-4" title="4">    &quot;type&quot;: &quot;bubble&quot;,</a>
-<a class="sourceLine" id="cb32-5" title="5">    &quot;styles&quot;: {</a>
-<a class="sourceLine" id="cb32-6" title="6">      &quot;footer&quot;: {</a>
-<a class="sourceLine" id="cb32-7" title="7">        &quot;separator&quot;: true</a>
-<a class="sourceLine" id="cb32-8" title="8">      }</a>
-<a class="sourceLine" id="cb32-9" title="9">    },</a>
-<a class="sourceLine" id="cb32-10" title="10">    &quot;header&quot;: {</a>
-<a class="sourceLine" id="cb32-11" title="11">      &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-12" title="12">      &quot;layout&quot;: &quot;vertical&quot;,</a>
-<a class="sourceLine" id="cb32-13" title="13">      &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-14" title="14">        {</a>
-<a class="sourceLine" id="cb32-15" title="15">          &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-16" title="16">          &quot;text&quot;: &quot;AIR QUALITY ALERT&quot;,</a>
-<a class="sourceLine" id="cb32-17" title="17">          &quot;weight&quot;: &quot;bold&quot;,</a>
-<a class="sourceLine" id="cb32-18" title="18">          &quot;size&quot;: &quot;xl&quot;,</a>
-<a class="sourceLine" id="cb32-19" title="19">          &quot;color&quot;: &quot;#ff0000&quot;,</a>
-<a class="sourceLine" id="cb32-20" title="20">          &quot;margin&quot;: &quot;md&quot;</a>
-<a class="sourceLine" id="cb32-21" title="21">        },</a>
-<a class="sourceLine" id="cb32-22" title="22">        {</a>
-<a class="sourceLine" id="cb32-23" title="23">          &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-24" title="24">          &quot;text&quot;: &quot;Unhealthy air reported in your area&quot;,</a>
-<a class="sourceLine" id="cb32-25" title="25">          &quot;size&quot;: &quot;xs&quot;,</a>
-<a class="sourceLine" id="cb32-26" title="26">          &quot;color&quot;: &quot;#aaaaaa&quot;,</a>
-<a class="sourceLine" id="cb32-27" title="27">          &quot;wrap&quot;: true</a>
-<a class="sourceLine" id="cb32-28" title="28">        }</a>
-<a class="sourceLine" id="cb32-29" title="29">      ]</a>
-<a class="sourceLine" id="cb32-30" title="30">    },</a>
-<a class="sourceLine" id="cb32-31" title="31">    &quot;body&quot;: {</a>
-<a class="sourceLine" id="cb32-32" title="32">      &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-33" title="33">      &quot;layout&quot;: &quot;vertical&quot;,</a>
-<a class="sourceLine" id="cb32-34" title="34">      &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-35" title="35">        {</a>
-<a class="sourceLine" id="cb32-36" title="36">          &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-37" title="37">          &quot;layout&quot;: &quot;vertical&quot;,</a>
-<a class="sourceLine" id="cb32-38" title="38">          &quot;margin&quot;: &quot;xxl&quot;,</a>
-<a class="sourceLine" id="cb32-39" title="39">          &quot;spacing&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-40" title="40">          &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-41" title="41">            {</a>
-<a class="sourceLine" id="cb32-42" title="42">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-43" title="43">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-44" title="44">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-45" title="45">                {</a>
-<a class="sourceLine" id="cb32-46" title="46">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-47" title="47">                  &quot;text&quot;: &quot;County&quot;,</a>
-<a class="sourceLine" id="cb32-48" title="48">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-49" title="49">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-50" title="50">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-51" title="51">                },</a>
-<a class="sourceLine" id="cb32-52" title="52">                {</a>
-<a class="sourceLine" id="cb32-53" title="53">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-54" title="54">                  &quot;text&quot;: #{county},</a>
-<a class="sourceLine" id="cb32-55" title="55">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-56" title="56">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-57" title="57">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-58" title="58">                }</a>
-<a class="sourceLine" id="cb32-59" title="59">              ]</a>
-<a class="sourceLine" id="cb32-60" title="60">            },</a>
-<a class="sourceLine" id="cb32-61" title="61">            {</a>
-<a class="sourceLine" id="cb32-62" title="62">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-63" title="63">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-64" title="64">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-65" title="65">                {</a>
-<a class="sourceLine" id="cb32-66" title="66">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-67" title="67">                  &quot;text&quot;: &quot;Status&quot;,</a>
-<a class="sourceLine" id="cb32-68" title="68">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-69" title="69">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-70" title="70">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-71" title="71">                },</a>
-<a class="sourceLine" id="cb32-72" title="72">                {</a>
-<a class="sourceLine" id="cb32-73" title="73">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-74" title="74">                  &quot;text&quot;: #{status},</a>
-<a class="sourceLine" id="cb32-75" title="75">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-76" title="76">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-77" title="77">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-78" title="78">                }</a>
-<a class="sourceLine" id="cb32-79" title="79">              ]</a>
-<a class="sourceLine" id="cb32-80" title="80">            },</a>
-<a class="sourceLine" id="cb32-81" title="81">            {</a>
-<a class="sourceLine" id="cb32-82" title="82">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-83" title="83">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-84" title="84">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-85" title="85">                {</a>
-<a class="sourceLine" id="cb32-86" title="86">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-87" title="87">                  &quot;text&quot;: &quot;AQI&quot;,</a>
-<a class="sourceLine" id="cb32-88" title="88">                  &quot;weight&quot;: &quot;bold&quot;,</a>
-<a class="sourceLine" id="cb32-89" title="89">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-90" title="90">                  &quot;color&quot;: &quot;#ff0000&quot;,</a>
-<a class="sourceLine" id="cb32-91" title="91">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-92" title="92">                },</a>
-<a class="sourceLine" id="cb32-93" title="93">                {</a>
-<a class="sourceLine" id="cb32-94" title="94">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-95" title="95">                  &quot;text&quot;: #{show aqi},</a>
-<a class="sourceLine" id="cb32-96" title="96">                  &quot;weight&quot;: &quot;bold&quot;,</a>
-<a class="sourceLine" id="cb32-97" title="97">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-98" title="98">                  &quot;color&quot;: &quot;#ff0000&quot;,</a>
-<a class="sourceLine" id="cb32-99" title="99">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-100" title="100">                }</a>
-<a class="sourceLine" id="cb32-101" title="101">              ]</a>
-<a class="sourceLine" id="cb32-102" title="102">            },</a>
-<a class="sourceLine" id="cb32-103" title="103">            {</a>
-<a class="sourceLine" id="cb32-104" title="104">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-105" title="105">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-106" title="106">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-107" title="107">                {</a>
-<a class="sourceLine" id="cb32-108" title="108">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-109" title="109">                  &quot;text&quot;: &quot;PM2.5&quot;,</a>
-<a class="sourceLine" id="cb32-110" title="110">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-111" title="111">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-112" title="112">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-113" title="113">                },</a>
-<a class="sourceLine" id="cb32-114" title="114">                {</a>
-<a class="sourceLine" id="cb32-115" title="115">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-116" title="116">                  &quot;text&quot;: #{show pm25},</a>
-<a class="sourceLine" id="cb32-117" title="117">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-118" title="118">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-119" title="119">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-120" title="120">                }</a>
-<a class="sourceLine" id="cb32-121" title="121">              ]</a>
-<a class="sourceLine" id="cb32-122" title="122">            },</a>
-<a class="sourceLine" id="cb32-123" title="123">            {</a>
-<a class="sourceLine" id="cb32-124" title="124">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-125" title="125">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-126" title="126">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-127" title="127">                {</a>
-<a class="sourceLine" id="cb32-128" title="128">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-129" title="129">                  &quot;text&quot;: &quot;PM10&quot;,</a>
-<a class="sourceLine" id="cb32-130" title="130">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-131" title="131">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-132" title="132">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-133" title="133">                },</a>
-<a class="sourceLine" id="cb32-134" title="134">                {</a>
-<a class="sourceLine" id="cb32-135" title="135">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-136" title="136">                  &quot;text&quot;: #{show pm10},</a>
-<a class="sourceLine" id="cb32-137" title="137">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-138" title="138">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-139" title="139">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-140" title="140">                }</a>
-<a class="sourceLine" id="cb32-141" title="141">              ]</a>
-<a class="sourceLine" id="cb32-142" title="142">            },</a>
-<a class="sourceLine" id="cb32-143" title="143">            {</a>
-<a class="sourceLine" id="cb32-144" title="144">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-145" title="145">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-146" title="146">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-147" title="147">                {</a>
-<a class="sourceLine" id="cb32-148" title="148">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-149" title="149">                  &quot;text&quot;: &quot;O3&quot;,</a>
-<a class="sourceLine" id="cb32-150" title="150">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-151" title="151">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-152" title="152">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-153" title="153">                },</a>
-<a class="sourceLine" id="cb32-154" title="154">                {</a>
-<a class="sourceLine" id="cb32-155" title="155">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-156" title="156">                  &quot;text&quot;: #{show o3},</a>
-<a class="sourceLine" id="cb32-157" title="157">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-158" title="158">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-159" title="159">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-160" title="160">                }</a>
-<a class="sourceLine" id="cb32-161" title="161">              ]</a>
-<a class="sourceLine" id="cb32-162" title="162">            },</a>
-<a class="sourceLine" id="cb32-163" title="163">            {</a>
-<a class="sourceLine" id="cb32-164" title="164">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-165" title="165">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-166" title="166">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-167" title="167">                {</a>
-<a class="sourceLine" id="cb32-168" title="168">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-169" title="169">                  &quot;text&quot;: &quot;CO&quot;,</a>
-<a class="sourceLine" id="cb32-170" title="170">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-171" title="171">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-172" title="172">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-173" title="173">                },</a>
-<a class="sourceLine" id="cb32-174" title="174">                {</a>
-<a class="sourceLine" id="cb32-175" title="175">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-176" title="176">                  &quot;text&quot;: #{show co},</a>
-<a class="sourceLine" id="cb32-177" title="177">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-178" title="178">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-179" title="179">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-180" title="180">                }</a>
-<a class="sourceLine" id="cb32-181" title="181">              ]</a>
-<a class="sourceLine" id="cb32-182" title="182">            },</a>
-<a class="sourceLine" id="cb32-183" title="183">            {</a>
-<a class="sourceLine" id="cb32-184" title="184">              &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-185" title="185">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-186" title="186">              &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-187" title="187">                {</a>
-<a class="sourceLine" id="cb32-188" title="188">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-189" title="189">                  &quot;text&quot;: &quot;SO2&quot;,</a>
-<a class="sourceLine" id="cb32-190" title="190">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-191" title="191">                  &quot;color&quot;: &quot;#555555&quot;,</a>
-<a class="sourceLine" id="cb32-192" title="192">                  &quot;flex&quot;: 0</a>
-<a class="sourceLine" id="cb32-193" title="193">                },</a>
-<a class="sourceLine" id="cb32-194" title="194">                {</a>
-<a class="sourceLine" id="cb32-195" title="195">                  &quot;type&quot;: &quot;text&quot;,</a>
-<a class="sourceLine" id="cb32-196" title="196">                  &quot;text&quot;: #{show so2},</a>
-<a class="sourceLine" id="cb32-197" title="197">                  &quot;size&quot;: &quot;sm&quot;,</a>
-<a class="sourceLine" id="cb32-198" title="198">                  &quot;color&quot;: &quot;#111111&quot;,</a>
-<a class="sourceLine" id="cb32-199" title="199">                  &quot;align&quot;: &quot;end&quot;</a>
-<a class="sourceLine" id="cb32-200" title="200">                }</a>
-<a class="sourceLine" id="cb32-201" title="201">              ]</a>
-<a class="sourceLine" id="cb32-202" title="202">            }</a>
-<a class="sourceLine" id="cb32-203" title="203">          ]</a>
-<a class="sourceLine" id="cb32-204" title="204">        }</a>
-<a class="sourceLine" id="cb32-205" title="205">      ]</a>
-<a class="sourceLine" id="cb32-206" title="206">    },</a>
-<a class="sourceLine" id="cb32-207" title="207">    &quot;footer&quot;: {</a>
-<a class="sourceLine" id="cb32-208" title="208">      &quot;type&quot;: &quot;box&quot;,</a>
-<a class="sourceLine" id="cb32-209" title="209">      &quot;layout&quot;: &quot;horizontal&quot;,</a>
-<a class="sourceLine" id="cb32-210" title="210">      &quot;contents&quot;: [</a>
-<a class="sourceLine" id="cb32-211" title="211">        {</a>
-<a class="sourceLine" id="cb32-212" title="212">          &quot;type&quot;: &quot;button&quot;,</a>
-<a class="sourceLine" id="cb32-213" title="213">          &quot;action&quot;: {</a>
-<a class="sourceLine" id="cb32-214" title="214">            &quot;type&quot;: &quot;uri&quot;,</a>
-<a class="sourceLine" id="cb32-215" title="215">            &quot;label&quot;: &quot;More info&quot;,</a>
-<a class="sourceLine" id="cb32-216" title="216">            &quot;uri&quot;: &quot;https://www.epa.gov.tw/&quot;</a>
-<a class="sourceLine" id="cb32-217" title="217">          }</a>
-<a class="sourceLine" id="cb32-218" title="218">        }</a>
-<a class="sourceLine" id="cb32-219" title="219">      ]</a>
-<a class="sourceLine" id="cb32-220" title="220">    }</a>
-<a class="sourceLine" id="cb32-221" title="221">  }</a>
-<a class="sourceLine" id="cb32-222" title="222">|]</a></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb33-1" title="1"><span class="ot">flexContent ::</span> <span class="dt">AQData</span> <span class="ot">-&gt;</span> <span class="dt">Value</span></a>
+<a class="sourceLine" id="cb33-2" title="2">flexContent <span class="dt">AQData</span>{<span class="fu">..</span>} <span class="fu">=</span> [aesonQQ|</a>
+<a class="sourceLine" id="cb33-3" title="3">  {</a>
+<a class="sourceLine" id="cb33-4" title="4">    &quot;type&quot;: &quot;bubble&quot;,</a>
+<a class="sourceLine" id="cb33-5" title="5">    &quot;styles&quot;: {</a>
+<a class="sourceLine" id="cb33-6" title="6">      &quot;footer&quot;: {</a>
+<a class="sourceLine" id="cb33-7" title="7">        &quot;separator&quot;: true</a>
+<a class="sourceLine" id="cb33-8" title="8">      }</a>
+<a class="sourceLine" id="cb33-9" title="9">    },</a>
+<a class="sourceLine" id="cb33-10" title="10">    &quot;header&quot;: {</a>
+<a class="sourceLine" id="cb33-11" title="11">      &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-12" title="12">      &quot;layout&quot;: &quot;vertical&quot;,</a>
+<a class="sourceLine" id="cb33-13" title="13">      &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-14" title="14">        {</a>
+<a class="sourceLine" id="cb33-15" title="15">          &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-16" title="16">          &quot;text&quot;: &quot;AIR QUALITY ALERT&quot;,</a>
+<a class="sourceLine" id="cb33-17" title="17">          &quot;weight&quot;: &quot;bold&quot;,</a>
+<a class="sourceLine" id="cb33-18" title="18">          &quot;size&quot;: &quot;xl&quot;,</a>
+<a class="sourceLine" id="cb33-19" title="19">          &quot;color&quot;: &quot;#ff0000&quot;,</a>
+<a class="sourceLine" id="cb33-20" title="20">          &quot;margin&quot;: &quot;md&quot;</a>
+<a class="sourceLine" id="cb33-21" title="21">        },</a>
+<a class="sourceLine" id="cb33-22" title="22">        {</a>
+<a class="sourceLine" id="cb33-23" title="23">          &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-24" title="24">          &quot;text&quot;: &quot;Unhealthy air reported in your area&quot;,</a>
+<a class="sourceLine" id="cb33-25" title="25">          &quot;size&quot;: &quot;xs&quot;,</a>
+<a class="sourceLine" id="cb33-26" title="26">          &quot;color&quot;: &quot;#aaaaaa&quot;,</a>
+<a class="sourceLine" id="cb33-27" title="27">          &quot;wrap&quot;: true</a>
+<a class="sourceLine" id="cb33-28" title="28">        }</a>
+<a class="sourceLine" id="cb33-29" title="29">      ]</a>
+<a class="sourceLine" id="cb33-30" title="30">    },</a>
+<a class="sourceLine" id="cb33-31" title="31">    &quot;body&quot;: {</a>
+<a class="sourceLine" id="cb33-32" title="32">      &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-33" title="33">      &quot;layout&quot;: &quot;vertical&quot;,</a>
+<a class="sourceLine" id="cb33-34" title="34">      &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-35" title="35">        {</a>
+<a class="sourceLine" id="cb33-36" title="36">          &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-37" title="37">          &quot;layout&quot;: &quot;vertical&quot;,</a>
+<a class="sourceLine" id="cb33-38" title="38">          &quot;margin&quot;: &quot;xxl&quot;,</a>
+<a class="sourceLine" id="cb33-39" title="39">          &quot;spacing&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-40" title="40">          &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-41" title="41">            {</a>
+<a class="sourceLine" id="cb33-42" title="42">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-43" title="43">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-44" title="44">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-45" title="45">                {</a>
+<a class="sourceLine" id="cb33-46" title="46">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-47" title="47">                  &quot;text&quot;: &quot;County&quot;,</a>
+<a class="sourceLine" id="cb33-48" title="48">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-49" title="49">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-50" title="50">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-51" title="51">                },</a>
+<a class="sourceLine" id="cb33-52" title="52">                {</a>
+<a class="sourceLine" id="cb33-53" title="53">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-54" title="54">                  &quot;text&quot;: #{county},</a>
+<a class="sourceLine" id="cb33-55" title="55">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-56" title="56">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-57" title="57">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-58" title="58">                }</a>
+<a class="sourceLine" id="cb33-59" title="59">              ]</a>
+<a class="sourceLine" id="cb33-60" title="60">            },</a>
+<a class="sourceLine" id="cb33-61" title="61">            {</a>
+<a class="sourceLine" id="cb33-62" title="62">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-63" title="63">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-64" title="64">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-65" title="65">                {</a>
+<a class="sourceLine" id="cb33-66" title="66">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-67" title="67">                  &quot;text&quot;: &quot;Status&quot;,</a>
+<a class="sourceLine" id="cb33-68" title="68">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-69" title="69">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-70" title="70">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-71" title="71">                },</a>
+<a class="sourceLine" id="cb33-72" title="72">                {</a>
+<a class="sourceLine" id="cb33-73" title="73">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-74" title="74">                  &quot;text&quot;: #{status},</a>
+<a class="sourceLine" id="cb33-75" title="75">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-76" title="76">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-77" title="77">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-78" title="78">                }</a>
+<a class="sourceLine" id="cb33-79" title="79">              ]</a>
+<a class="sourceLine" id="cb33-80" title="80">            },</a>
+<a class="sourceLine" id="cb33-81" title="81">            {</a>
+<a class="sourceLine" id="cb33-82" title="82">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-83" title="83">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-84" title="84">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-85" title="85">                {</a>
+<a class="sourceLine" id="cb33-86" title="86">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-87" title="87">                  &quot;text&quot;: &quot;AQI&quot;,</a>
+<a class="sourceLine" id="cb33-88" title="88">                  &quot;weight&quot;: &quot;bold&quot;,</a>
+<a class="sourceLine" id="cb33-89" title="89">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-90" title="90">                  &quot;color&quot;: &quot;#ff0000&quot;,</a>
+<a class="sourceLine" id="cb33-91" title="91">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-92" title="92">                },</a>
+<a class="sourceLine" id="cb33-93" title="93">                {</a>
+<a class="sourceLine" id="cb33-94" title="94">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-95" title="95">                  &quot;text&quot;: #{show aqi},</a>
+<a class="sourceLine" id="cb33-96" title="96">                  &quot;weight&quot;: &quot;bold&quot;,</a>
+<a class="sourceLine" id="cb33-97" title="97">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-98" title="98">                  &quot;color&quot;: &quot;#ff0000&quot;,</a>
+<a class="sourceLine" id="cb33-99" title="99">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-100" title="100">                }</a>
+<a class="sourceLine" id="cb33-101" title="101">              ]</a>
+<a class="sourceLine" id="cb33-102" title="102">            },</a>
+<a class="sourceLine" id="cb33-103" title="103">            {</a>
+<a class="sourceLine" id="cb33-104" title="104">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-105" title="105">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-106" title="106">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-107" title="107">                {</a>
+<a class="sourceLine" id="cb33-108" title="108">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-109" title="109">                  &quot;text&quot;: &quot;PM2.5&quot;,</a>
+<a class="sourceLine" id="cb33-110" title="110">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-111" title="111">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-112" title="112">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-113" title="113">                },</a>
+<a class="sourceLine" id="cb33-114" title="114">                {</a>
+<a class="sourceLine" id="cb33-115" title="115">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-116" title="116">                  &quot;text&quot;: #{show pm25},</a>
+<a class="sourceLine" id="cb33-117" title="117">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-118" title="118">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-119" title="119">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-120" title="120">                }</a>
+<a class="sourceLine" id="cb33-121" title="121">              ]</a>
+<a class="sourceLine" id="cb33-122" title="122">            },</a>
+<a class="sourceLine" id="cb33-123" title="123">            {</a>
+<a class="sourceLine" id="cb33-124" title="124">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-125" title="125">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-126" title="126">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-127" title="127">                {</a>
+<a class="sourceLine" id="cb33-128" title="128">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-129" title="129">                  &quot;text&quot;: &quot;PM10&quot;,</a>
+<a class="sourceLine" id="cb33-130" title="130">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-131" title="131">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-132" title="132">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-133" title="133">                },</a>
+<a class="sourceLine" id="cb33-134" title="134">                {</a>
+<a class="sourceLine" id="cb33-135" title="135">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-136" title="136">                  &quot;text&quot;: #{show pm10},</a>
+<a class="sourceLine" id="cb33-137" title="137">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-138" title="138">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-139" title="139">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-140" title="140">                }</a>
+<a class="sourceLine" id="cb33-141" title="141">              ]</a>
+<a class="sourceLine" id="cb33-142" title="142">            },</a>
+<a class="sourceLine" id="cb33-143" title="143">            {</a>
+<a class="sourceLine" id="cb33-144" title="144">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-145" title="145">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-146" title="146">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-147" title="147">                {</a>
+<a class="sourceLine" id="cb33-148" title="148">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-149" title="149">                  &quot;text&quot;: &quot;O3&quot;,</a>
+<a class="sourceLine" id="cb33-150" title="150">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-151" title="151">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-152" title="152">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-153" title="153">                },</a>
+<a class="sourceLine" id="cb33-154" title="154">                {</a>
+<a class="sourceLine" id="cb33-155" title="155">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-156" title="156">                  &quot;text&quot;: #{show o3},</a>
+<a class="sourceLine" id="cb33-157" title="157">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-158" title="158">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-159" title="159">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-160" title="160">                }</a>
+<a class="sourceLine" id="cb33-161" title="161">              ]</a>
+<a class="sourceLine" id="cb33-162" title="162">            },</a>
+<a class="sourceLine" id="cb33-163" title="163">            {</a>
+<a class="sourceLine" id="cb33-164" title="164">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-165" title="165">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-166" title="166">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-167" title="167">                {</a>
+<a class="sourceLine" id="cb33-168" title="168">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-169" title="169">                  &quot;text&quot;: &quot;CO&quot;,</a>
+<a class="sourceLine" id="cb33-170" title="170">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-171" title="171">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-172" title="172">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-173" title="173">                },</a>
+<a class="sourceLine" id="cb33-174" title="174">                {</a>
+<a class="sourceLine" id="cb33-175" title="175">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-176" title="176">                  &quot;text&quot;: #{show co},</a>
+<a class="sourceLine" id="cb33-177" title="177">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-178" title="178">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-179" title="179">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-180" title="180">                }</a>
+<a class="sourceLine" id="cb33-181" title="181">              ]</a>
+<a class="sourceLine" id="cb33-182" title="182">            },</a>
+<a class="sourceLine" id="cb33-183" title="183">            {</a>
+<a class="sourceLine" id="cb33-184" title="184">              &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-185" title="185">              &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-186" title="186">              &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-187" title="187">                {</a>
+<a class="sourceLine" id="cb33-188" title="188">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-189" title="189">                  &quot;text&quot;: &quot;SO2&quot;,</a>
+<a class="sourceLine" id="cb33-190" title="190">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-191" title="191">                  &quot;color&quot;: &quot;#555555&quot;,</a>
+<a class="sourceLine" id="cb33-192" title="192">                  &quot;flex&quot;: 0</a>
+<a class="sourceLine" id="cb33-193" title="193">                },</a>
+<a class="sourceLine" id="cb33-194" title="194">                {</a>
+<a class="sourceLine" id="cb33-195" title="195">                  &quot;type&quot;: &quot;text&quot;,</a>
+<a class="sourceLine" id="cb33-196" title="196">                  &quot;text&quot;: #{show so2},</a>
+<a class="sourceLine" id="cb33-197" title="197">                  &quot;size&quot;: &quot;sm&quot;,</a>
+<a class="sourceLine" id="cb33-198" title="198">                  &quot;color&quot;: &quot;#111111&quot;,</a>
+<a class="sourceLine" id="cb33-199" title="199">                  &quot;align&quot;: &quot;end&quot;</a>
+<a class="sourceLine" id="cb33-200" title="200">                }</a>
+<a class="sourceLine" id="cb33-201" title="201">              ]</a>
+<a class="sourceLine" id="cb33-202" title="202">            }</a>
+<a class="sourceLine" id="cb33-203" title="203">          ]</a>
+<a class="sourceLine" id="cb33-204" title="204">        }</a>
+<a class="sourceLine" id="cb33-205" title="205">      ]</a>
+<a class="sourceLine" id="cb33-206" title="206">    },</a>
+<a class="sourceLine" id="cb33-207" title="207">    &quot;footer&quot;: {</a>
+<a class="sourceLine" id="cb33-208" title="208">      &quot;type&quot;: &quot;box&quot;,</a>
+<a class="sourceLine" id="cb33-209" title="209">      &quot;layout&quot;: &quot;horizontal&quot;,</a>
+<a class="sourceLine" id="cb33-210" title="210">      &quot;contents&quot;: [</a>
+<a class="sourceLine" id="cb33-211" title="211">        {</a>
+<a class="sourceLine" id="cb33-212" title="212">          &quot;type&quot;: &quot;button&quot;,</a>
+<a class="sourceLine" id="cb33-213" title="213">          &quot;action&quot;: {</a>
+<a class="sourceLine" id="cb33-214" title="214">            &quot;type&quot;: &quot;uri&quot;,</a>
+<a class="sourceLine" id="cb33-215" title="215">            &quot;label&quot;: &quot;More info&quot;,</a>
+<a class="sourceLine" id="cb33-216" title="216">            &quot;uri&quot;: &quot;https://www.epa.gov.tw/&quot;</a>
+<a class="sourceLine" id="cb33-217" title="217">          }</a>
+<a class="sourceLine" id="cb33-218" title="218">        }</a>
+<a class="sourceLine" id="cb33-219" title="219">      ]</a>
+<a class="sourceLine" id="cb33-220" title="220">    }</a>
+<a class="sourceLine" id="cb33-221" title="221">  }</a>
+<a class="sourceLine" id="cb33-222" title="222">|]</a></code></pre></div>
 <h3 id="putting-it-all-together">Putting it all together</h3>
 <p>We are almost done! The only remaining part is to run our server and main loop:</p>
 <ul>
@@ -558,16 +562,16 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <li>thread the inital environment to our <code class="sourceCode haskell">app</code> and <code class="sourceCode haskell">loop</code>.</li>
 <li>call <code class="sourceCode haskell">Network.Wai.Handler.Warp.run</code> to run the webhook in port <code>3000</code></li>
 </ul>
-<div class="sourceCode" id="cb33"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb33-1" title="1"><span class="ot">main ::</span> <span class="dt">IO</span> ()</a>
-<a class="sourceLine" id="cb33-2" title="2">main <span class="fu">=</span> <span class="kw">do</span></a>
-<a class="sourceLine" id="cb33-3" title="3">  token  <span class="ot">&lt;-</span> fromString <span class="fu">&lt;$&gt;</span> getEnv <span class="st">&quot;CHANNEL_TOKEN&quot;</span></a>
-<a class="sourceLine" id="cb33-4" title="4">  secret <span class="ot">&lt;-</span> fromString <span class="fu">&lt;$&gt;</span> getEnv <span class="st">&quot;CHANNEL_SECRET&quot;</span></a>
-<a class="sourceLine" id="cb33-5" title="5">  env    <span class="ot">&lt;-</span> atomically <span class="fu">$</span> <span class="dt">Env</span> token secret <span class="fu">&lt;$&gt;</span> newTVar []</a>
-<a class="sourceLine" id="cb33-6" title="6">  runReaderT loop env</a>
-<a class="sourceLine" id="cb33-7" title="7">  run <span class="dv">3000</span> <span class="fu">$</span> runReader app env</a></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb34-1" title="1"><span class="ot">main ::</span> <span class="dt">IO</span> ()</a>
+<a class="sourceLine" id="cb34-2" title="2">main <span class="fu">=</span> <span class="kw">do</span></a>
+<a class="sourceLine" id="cb34-3" title="3">  token  <span class="ot">&lt;-</span> fromString <span class="fu">&lt;$&gt;</span> getEnv <span class="st">&quot;CHANNEL_TOKEN&quot;</span></a>
+<a class="sourceLine" id="cb34-4" title="4">  secret <span class="ot">&lt;-</span> fromString <span class="fu">&lt;$&gt;</span> getEnv <span class="st">&quot;CHANNEL_SECRET&quot;</span></a>
+<a class="sourceLine" id="cb34-5" title="5">  env    <span class="ot">&lt;-</span> atomically <span class="fu">$</span> <span class="dt">Env</span> token secret <span class="fu">&lt;$&gt;</span> newTVar []</a>
+<a class="sourceLine" id="cb34-6" title="6">  runReaderT loop env</a>
+<a class="sourceLine" id="cb34-7" title="7">  run <span class="dv">3000</span> <span class="fu">$</span> runReader app env</a></code></pre></div>
 <p>Here you can see we are actually instantiating <code>loop</code> and <code>app</code> to concrete monads.</p>
 <h3 id="wanna-be-friends">Wanna be friends?</h3>
-<p>You can follow (i.e. befriend) this exactly same bot as a friend:</p>
+<p>You can follow this exactly same bot and see how it works:</p>
 <p><img src="../images/qr-code.png" alt="line chat" class="center" style="width:50.0%" /><br />
 </p>
 <h3 id="conclusion">Conclusion</h3>
@@ -575,8 +579,9 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <section class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>Note that in this example the list of users will not be persisted across restarts or crashes; in a production environment you should use a database to store users.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn1"><p>Bear in mind that in this example the list of users will not be persisted across restarts or crashes; in a production environment you should use a database to store users.<a href="#fnref1" class="footnote-back">↩</a></p></li>
 <li id="fn2"><p>the so-called mtl-style programming<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Note that we are not checking for possible errors, but we could e.g. add a constraint <a href="http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html"><code class="sourceCode haskell"><span class="dt">MonadError</span> <span class="dt">ClientError</span></code></a> to handle possible errors.<a href="#fnref3" class="footnote-back">↩</a></p></li>
 </ol>
 </section>
     </article>

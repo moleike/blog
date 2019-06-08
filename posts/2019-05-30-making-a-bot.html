@@ -571,7 +571,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <a class="sourceLine" id="cb34-7" title="7">  run <span class="dv">3000</span> <span class="fu">$</span> runReader app env</a></code></pre></div>
 <p>Here you can see we are actually instantiating <code>loop</code> and <code>app</code> to concrete monads.</p>
 <h3 id="wanna-be-friends">Wanna be friends?</h3>
-<p>You can follow this exactly same bot and see how it works:</p>
+<p>If you live in Taiwan, you can follow this exactly same bot and see how it works:</p>
 <p><img src="../images/qr-code.png" alt="line chat" class="center" style="width:50.0%" /><br />
 </p>
 <h3 id="conclusion">Conclusion</h3>
@@ -581,7 +581,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <ol>
 <li id="fn1"><p>Bear in mind that in this example the list of users will not be persisted across restarts or crashes; in a production environment you should use a database to store users.<a href="#fnref1" class="footnote-back">↩</a></p></li>
 <li id="fn2"><p>the so-called mtl-style programming<a href="#fnref2" class="footnote-back">↩</a></p></li>
-<li id="fn3"><p>Note that we are not checking for possible errors, but we could e.g. add a constraint <a href="http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html"><code class="sourceCode haskell"><span class="dt">MonadError</span> <span class="dt">ClientError</span></code></a> to handle possible errors.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Note that in order to keep this tutorial concise, we are not checking for possible errors, but you should pattern match the result of <code class="sourceCode haskell">runLine</code>. <code class="sourceCode haskell"><span class="dt">Line</span></code> has an instance of <a href="http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html"><code class="sourceCode haskell"><span class="dt">MonadError</span> <span class="dt">ClientError</span></code></a> so you can catch errors there, too.<a href="#fnref3" class="footnote-back">↩</a></p></li>
 </ol>
 </section>
     </article>

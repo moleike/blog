@@ -582,7 +582,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <li id="fn1"><p>Bear in mind that in this example the list of users will not be persisted across restarts or crashes; in a production environment you should use a database to store users.<a href="#fnref1" class="footnote-back">↩</a></p></li>
 <li id="fn2"><p>the so-called mtl-style programming<a href="#fnref2" class="footnote-back">↩</a></p></li>
 <li id="fn3"><p>Note that in order to keep this tutorial concise, we are not checking for possible errors, but you should pattern match the result of <code class="sourceCode haskell">runLine</code>. <code class="sourceCode haskell"><span class="dt">Line</span></code> has an instance of <a href="http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html"><code class="sourceCode haskell"><span class="dt">MonadError</span> <span class="dt">ClientError</span></code></a> so you can catch errors there, too.<a href="#fnref3" class="footnote-back">↩</a></p></li>
-<li id="fn4"><p>the solution we are building here to associate users to monitoring stations would be impractical for a real application, where would make more sense to retrieve users using a geospaital index and query by radius.<a href="#fnref4" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>the solution we are building here to associate users to monitoring stations would be impractical for a real application, where it would make more sense to retrieve users querying by radius in a geospatial index, and notify users with <a href="https://developers.line.biz/en/reference/messaging-api/#send-multicast-message">multicast messages</a>.<a href="#fnref4" class="footnote-back">↩</a></p></li>
 </ol>
 </section>
     </article>

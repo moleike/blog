@@ -302,7 +302,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <a class="sourceLine" id="cb27-10" title="10">    <span class="kw">let</span> users'' <span class="fu">=</span> [(user, aqData <span class="ot">`closestTo`</span> coord) <span class="fu">|</span> (user, coord) <span class="ot">&lt;-</span> users']</a>
 <a class="sourceLine" id="cb27-11" title="11">    <span class="kw">in</span>  forM_ users'' <span class="fu">$</span> <span class="fu">flip</span> runLine token <span class="fu">.</span> notifyChat</a>
 <a class="sourceLine" id="cb27-12" title="12">  <span class="fu">return</span> ()</a></code></pre></div>
-<p><code class="sourceCode haskell">processAQData</code> does serveral things:</p>
+<p><code class="sourceCode haskell">processAQData</code> does serveral things<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a>:</p>
 <ul>
 <li>read the list stored in the transactional variable <code>users</code> in the environment: if the list is empty, <code class="sourceCode haskell">retry</code>, blocking the thread until users are added</li>
 <li>call <code class="sourceCode haskell">getAQData</code> to get the most recently available air quality data</li>
@@ -582,6 +582,7 @@ In this tutorial, I want to show you how a chatbot can help you reduce your poll
 <li id="fn1"><p>Bear in mind that in this example the list of users will not be persisted across restarts or crashes; in a production environment you should use a database to store users.<a href="#fnref1" class="footnote-back">↩</a></p></li>
 <li id="fn2"><p>the so-called mtl-style programming<a href="#fnref2" class="footnote-back">↩</a></p></li>
 <li id="fn3"><p>Note that in order to keep this tutorial concise, we are not checking for possible errors, but you should pattern match the result of <code class="sourceCode haskell">runLine</code>. <code class="sourceCode haskell"><span class="dt">Line</span></code> has an instance of <a href="http://hackage.haskell.org/package/mtl-2.2.2/docs/Control-Monad-Error.html"><code class="sourceCode haskell"><span class="dt">MonadError</span> <span class="dt">ClientError</span></code></a> so you can catch errors there, too.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>the solution we are building here to associate users to monitoring stations would be impractical for a real application, where would make more sense to retrieve users using a geospaital index and query by radius.<a href="#fnref4" class="footnote-back">↩</a></p></li>
 </ol>
 </section>
     </article>
